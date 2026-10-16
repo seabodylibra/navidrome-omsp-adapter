@@ -1,0 +1,269 @@
+# 客户端网络调用审计
+
+扫描全部 ArkTS/TS 文件，保留网络库、HTTP 动词、下载入口及动态播放地址的候选行。Preferences/Emitter 等同名方法是非网络调用；详见契约中的分类。
+
+## Core
+
+- `entry/src/main/ets/adapter/index.ets:1` — `import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "@ohos/axios"`
+- `entry/src/main/ets/adapter/index.ets:63` — `const response: AxiosResponse = await axios.request(config)`
+- `entry/src/main/ets/adapter/index.ets:114` — `const request = axios.create({`
+- `entry/src/main/ets/adapter/index.ets:115` — `baseURL: finalBaseURL,`
+- `entry/src/main/ets/adapter/index.ets:145` — `const res = (await request.get('/connect/status')).data as BaseResponse<User>`
+- `entry/src/main/ets/adapter/index.ets:158` — `const res = (await request.get('/connect/qr/key')).data as BaseResponse<UniKey>`
+- `entry/src/main/ets/adapter/index.ets:170` — `const res = (await request.get('/connect/qr/create?key=${unikey}')).data as BaseResponse<QRCode>`
+- `entry/src/main/ets/adapter/index.ets:182` — `const res = (await request.get('/connect/qr/check?key=${unikey}')).data as BaseResponse<QRCheck>`
+- `entry/src/main/ets/adapter/index.ets:199` — `.get('/playlist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:255` — `.get('/song/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:312` — `.get('/artist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:369` — `.get('/playlist/toplist?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:424` — `.get('/playlist/list?uid=${source.auth?.user?.id}')`
+- `entry/src/main/ets/adapter/index.ets:471` — `const res = (await request.get('/playlist/detail?id=${playlist.id}&limit=5000', {`
+- `entry/src/main/ets/adapter/index.ets:510` — `const res = (await request.get('/album/detail?id=${album.id}', {`
+- `entry/src/main/ets/adapter/index.ets:570` — `const res = (await request.get(uri)).data as BaseResponse<Song>;`
+- `entry/src/main/ets/adapter/index.ets:584` — `const res = (await request.get('/artist/detail?id=${artist.id}', {`
+- `entry/src/main/ets/adapter/index.ets:613` — `.get('/search?keywords=${keywords}&limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:691` — `const res = (await request.put('/song/like?id=${song.id}&like=${like}')).data as BaseResponse<LikeResponse>;`
+- `entry/src/main/ets/component/Playing4Landscape.ets:71` — `@Local windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage`
+- `entry/src/main/ets/component/Playing4Landscape.ets:539` — `// PreferencesUtil.put('ChooseTheme', 0)`
+- `entry/src/main/ets/component/Playing4Landscape.ets:1261` — `// let ChooseTheme: number = PreferencesUtil.get('ChooseTheme') ?? 0`
+- `entry/src/main/ets/component/SourceFilter.ets:93` — `newSet.delete(option.id)`
+- `entry/src/main/ets/pages/Index.ets:194` — `let prevAtmospheric_pressure : number = AppStorage.get('Atmospheric_pressure') ?? data.pressure`
+- `entry/src/main/ets/pages/Index.ets:196` — `let Atmospheric_pressure_change_prev:number = AppStorage.get('Atmospheric_pressure_change')??0`
+- `entry/src/main/ets/pages/MultiFuncSubWindow.ets:29` — `@State windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage`
+- `entry/src/main/ets/pages/MultiFuncSubWindow.ets:203` — `let pageStack = AppStorage.get("pageStack") as NavPathStack`
+- `entry/src/main/ets/util/AVPlayerManager.ets:623` — `player.url = url;`
+- `entry/src/main/ets/util/AVPlayerManager.ets:928` — `// let isMixWithOthers = await AppStorage.get(StorageConstants.MIX_WITH_OTHERS) as boolean`
+- `entry/src/main/ets/util/DownloadUtils.ets:48` — `public async downloadFile(config: DownloadConfig): Promise<string | void> {`
+- `entry/src/main/ets/util/DownloadUtils.ets:65` — `const downloadTask = await request.downloadFile(this.context!, {`
+- `entry/src/main/ets/util/EventHelper.ets:43` — `const cache = hasCache ? SongCacheManager.get(cacheKey) : null;`
+- `entry/src/main/ets/util/EventHelper.ets:169` — `DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/EventHelper.ets:333` — `EmitterUtil.post("on_playing_song", data);`
+- `entry/src/main/ets/util/EventHelper.ets:343` — `EmitterUtil.post("on_loop_mode", loopMode);`
+- `entry/src/main/ets/util/EventHelper.ets:384` — `let pageStack = AppStorage.get("pageStack") as NavPathStack`
+- `entry/src/main/ets/util/EventHelper.ets:391` — `EmitterUtil.post("on_init_data", data);`
+- `entry/src/main/ets/util/EventHelper.ets:395` — `EmitterUtil.post("on_favorite_toggle", data);`
+- `entry/src/main/ets/util/EventHelper.ets:409` — `EmitterUtil.post("on_song_state", data);`
+- `entry/src/main/ets/util/EventHelper.ets:415` — `EmitterUtil.post("on_song_state", data);`
+- `entry/src/main/ets/util/EventHelper.ets:421` — `EmitterUtil.post("on_pause_timer", pauseAt);`
+- `entry/src/main/ets/util/EventHelper.ets:425` — `EmitterUtil.post("on_form_jump", targetPage);`
+- `entry/src/main/ets/util/EventHelper.ets:435` — `EmitterUtil.post("on_pip_lyric", data);`
+- `entry/src/main/ets/util/FormUtils.ets:36` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:113` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:114` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:154` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:169` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:170` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:220` — `let httpRequest = http.createHttp();`
+- `entry/src/main/ets/util/FormUtils.ets:221` — `let data = await httpRequest.request(imageUrl+'?param=512y512');`
+- `entry/src/main/ets/util/HoldHand.ets:21` — `let hand_timer:number = AppStorage.get('hand_timer') ??0`
+- `entry/src/main/ets/util/PipManager.ets:52` — `Text(AppStorage.get('test_index'))`
+- `entry/src/main/ets/util/PipManager.ets:72` — `private mess:string=AppStorage.get('test_index')??''`
+- `entry/src/main/ets/util/PipManager.ets:77` — `//   this.mess = AppStorage.get('test_index')??'w';`
+- `entry/src/main/ets/util/PipManager.ets:89` — `song = AppStorage.get("current_playing_song") ?? song`
+- `entry/src/main/ets/util/PipManager.ets:91` — `Is_PAD = AppStorage.get("isWideScreen")??false`
+- `entry/src/main/ets/util/PipManager.ets:131` — `// private message_text:LyricsLine=AppStorage.get('current_line_lyrics')`
+- `entry/src/main/ets/util/PipManager.ets:134` — `private mess: string= AppStorage.get('test_index') ?? 'w'`
+- `entry/src/main/ets/util/PipManager.ets:253` — `playing_judge = AppStorage.get('playing_judge') ?? false`
+- `entry/src/main/ets/util/PipManager.ets:268` — `playing_judge = AppStorage.get('playing_judge') ?? false`
+- `entry/src/main/ets/util/PlayRecordManager.ets:40` — `const data = await PreferencesUtil.get(PREFERENCE_NAME, '{}');`
+- `entry/src/main/ets/util/PlayRecordManager.ets:70` — `await PreferencesUtil.put(PREFERENCE_NAME, JSON.stringify(recordsData));`
+- `entry/src/main/ets/util/PlayRecordManager.ets:86` — `const existingRecord = this.records.get(key);`
+- `entry/src/main/ets/util/PlayRecordManager.ets:123` — `this.records.delete(oldestKey);`
+- `entry/src/main/ets/util/PlayRecordManager.ets:188` — `const currentCount = artistMap.get(artistName) || 0;`
+- `entry/src/main/ets/util/PlayRecordManager.ets:225` — `if (this.records.delete(key)) {`
+- `entry/src/main/ets/util/PreferenceCache.ets:86` — `return PreferencesCache.CACHE_MAP.get(key) as string;`
+- `entry/src/main/ets/util/PreferenceCache.ets:95` — `PreferencesCache.CACHE_MAP.delete(key);`
+- `entry/src/main/ets/util/PreferenceCache.ets:723` — `const winWidth = AppStorage.get('winWidthWithPx') as number`
+- `entry/src/main/ets/util/PreferenceCache.ets:724` — `const winHeight = AppStorage.get('winHeightWithPx') as number`
+- `entry/src/main/ets/util/PreferenceCache.ets:725` — `const bottomRect = AppStorage.get('bottomRect') as number`
+- `entry/src/main/ets/util/PreferenceCache.ets:726` — `const bottom_judge = AppStorage.get('bottom_judge') as string`
+- `entry/src/main/ets/util/RdbUtils.ets:74` — `rdbStore.delete(predicates).then((rows: number) => {`
+- `entry/src/main/ets/util/SongCacheManager.ets:115` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongCacheManager.ets:147` — `PreferencesUtil.put(fullKey, JSON.stringify(cacheItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:199` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:239` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:136` — `this.loadedSongIds.delete(song.id);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:203` — `this.loadedSongIds.delete(id);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:100` — `const existingItem = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:119` — `this.downloadQueue.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:120` — `this.activeTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:121` — `this.pausedTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:130` — `const progress = this.downloadQueue.get(task.songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:217` — `this.activeTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:235` — `this.activeTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:338` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:356` — `const progress = this.downloadQueue.get(task.songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:384` — `const activeTask = this.activeTasks.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:387` — `this.pausedTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:389` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:410` — `this.pausedTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:412` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:463` — `const activeTask = this.activeTasks.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:468` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:489` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:509` — `const activeTask = this.activeTasks.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:512` — `this.pausedTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:514` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:535` — `this.pausedTasks.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:537` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:619` — `const progress = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:641` — `const progress = this.downloadQueue.get(task.songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:931` — `DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/SongDownloadManager.ets:999` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongDownloadManager.ets:1156` — `PreferencesUtil.put(fullKey, JSON.stringify(downloadItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:1221` — `await PreferencesUtil.delete(fullKey, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:1326` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/WindowUtil.ets:247` — `let deviceType = AppStorage.get('deviceType') as resourceManager.DeviceType`
+- `entry/src/main/ets/view/Personalized_settings.ets:155` — `let prevAtmospheric_pressure : number = AppStorage.get('Atmospheric_pressure') ?? data.pressure`
+- `entry/src/main/ets/view/Personalized_settings.ets:157` — `let Atmospheric_pressure_change_prev:number = AppStorage.get('Atmospheric_pressure_change')??0`
+- `entry/src/main/ets/view/Playing.ets:245` — `http.createHttp()`
+- `entry/src/main/ets/view/Playing.ets:246` — `.request(uri, (error: BusinessError, data: http.HttpResponse) => {`
+- `entry/src/main/ets/view/Playlist.ets:32` — `@StorageLink('current_playlist_data') playlist: Playlist | null = AppStorage.get('current_playlist_data') as Playlist`
+## Community
+
+- `entry/src/main/ets/adapter/index.ets:1` — `import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "@ohos/axios"`
+- `entry/src/main/ets/adapter/index.ets:63` — `const response: AxiosResponse = await axios.request(config)`
+- `entry/src/main/ets/adapter/index.ets:91` — `const request = axios.create({`
+- `entry/src/main/ets/adapter/index.ets:92` — `baseURL: source.url,`
+- `entry/src/main/ets/adapter/index.ets:120` — `const res = (await request.get('/connect/status')).data as BaseResponse<User>`
+- `entry/src/main/ets/adapter/index.ets:133` — `const res = (await request.get('/connect/qr/key')).data as BaseResponse<UniKey>`
+- `entry/src/main/ets/adapter/index.ets:145` — `const res = (await request.get('/connect/qr/create?key=${unikey}')).data as BaseResponse<QRCode>`
+- `entry/src/main/ets/adapter/index.ets:157` — `const res = (await request.get('/connect/qr/check?key=${unikey}')).data as BaseResponse<QRCheck>`
+- `entry/src/main/ets/adapter/index.ets:174` — `.get('/playlist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:229` — `.get('/song/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:284` — `.get('/artist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:339` — `.get('/playlist/toplist?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:392` — `.get('/playlist/list?uid=${source.auth?.user?.id}')`
+- `entry/src/main/ets/adapter/index.ets:439` — `const res = (await request.get('/playlist/detail?id=${playlist.id}', {`
+- `entry/src/main/ets/adapter/index.ets:464` — `const res = (await request.get('/album/detail?id=${album.id}', {`
+- `entry/src/main/ets/adapter/index.ets:513` — `const res = (await request.get(uri)).data as BaseResponse<Song>;`
+- `entry/src/main/ets/adapter/index.ets:526` — `const res = (await request.get('/artist/detail?id=${artist.id}', {`
+- `entry/src/main/ets/adapter/index.ets:555` — `.get('/search?keywords=${keywords}&limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:633` — `const res = (await request.put('/song/like?id=${song.id}&like=${like}')).data as BaseResponse<LikeResponse>;`
+- `entry/src/main/ets/util/AVPlayerManager.ets:590` — `player.url = url;`
+- `entry/src/main/ets/util/AVPlayerManager.ets:681` — `// let isMixWithOthers = await AppStorage.get(StorageConstants.MIX_WITH_OTHERS) as boolean`
+- `entry/src/main/ets/util/DownloadUtils.ets:48` — `public async downloadFile(config: DownloadConfig): Promise<string | void> {`
+- `entry/src/main/ets/util/DownloadUtils.ets:62` — `const downloadTask = await request.downloadFile(this.context!, {`
+- `entry/src/main/ets/util/EventHelper.ets:53` — `DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/EventHelper.ets:136` — `const cache = SongCacheManager.get('${key}');`
+- `entry/src/main/ets/util/EventHelper.ets:173` — `EmitterUtil.post("on_playing_song", data);`
+- `entry/src/main/ets/util/EventHelper.ets:183` — `EmitterUtil.post("on_loop_mode", loopMode);`
+- `entry/src/main/ets/util/EventHelper.ets:225` — `let pageStack = AppStorage.get("pageStack") as NavPathStack`
+- `entry/src/main/ets/util/EventHelper.ets:233` — `EmitterUtil.post("on_init_data", data);`
+- `entry/src/main/ets/util/EventHelper.ets:237` — `EmitterUtil.post("on_favorite_toggle", data);`
+- `entry/src/main/ets/util/EventHelper.ets:247` — `EmitterUtil.post("on_song_state", data);`
+- `entry/src/main/ets/util/EventHelper.ets:251` — `EmitterUtil.post("on_pause_timer", pauseAt);`
+- `entry/src/main/ets/util/EventHelper.ets:255` — `EmitterUtil.post("on_form_jump", targetPage);`
+- `entry/src/main/ets/util/FormUtils.ets:35` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:73` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:74` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:114` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:129` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:130` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:180` — `let httpRequest = http.createHttp();`
+- `entry/src/main/ets/util/FormUtils.ets:181` — `let data = await httpRequest.request(imageUrl+'?param=512y512');`
+- `entry/src/main/ets/util/PipManager.ets:11` — `let mess:string=AppStorage.get('test_index')??''`
+- `entry/src/main/ets/util/PipManager.ets:53` — `Text(AppStorage.get('test_index'))`
+- `entry/src/main/ets/util/PipManager.ets:66` — `mess =AppStorage.get('test_index') ??'a'`
+- `entry/src/main/ets/util/PipManager.ets:75` — `private mess:string=AppStorage.get('test_index')??''`
+- `entry/src/main/ets/util/PipManager.ets:80` — `//   this.mess = AppStorage.get('test_index')??'w';`
+- `entry/src/main/ets/util/PipManager.ets:92` — `mess=AppStorage.get('test_index')??'w'`
+- `entry/src/main/ets/util/PipManager.ets:93` — `song = AppStorage.get("current_playing_song")??song`
+- `entry/src/main/ets/util/PipManager.ets:95` — `Is_PAD = AppStorage.get("isWideScreen")??false`
+- `entry/src/main/ets/util/PipManager.ets:134` — `// private message_text:LyricsLine=AppStorage.get('current_line_lyrics')`
+- `entry/src/main/ets/util/PipManager.ets:137` — `private mess:string=AppStorage.get('test_index')??'w'`
+- `entry/src/main/ets/util/PipManager.ets:269` — `playing_judge = AppStorage.get("playing_judge")??false`
+- `entry/src/main/ets/util/PipManager.ets:279` — `mess=AppStorage.get('test_index')??'a'`
+- `entry/src/main/ets/util/PipManager.ets:280` — `nodeController.update(AppStorage.get('test_index')??'a')`
+- `entry/src/main/ets/util/PipManager.ets:286` — `nodeController.update(AppStorage.get('test_index')??'l')`
+- `entry/src/main/ets/util/PreferenceCache.ets:49` — `return PreferencesCache.CACHE_MAP.get(key) as string;`
+- `entry/src/main/ets/util/RdbUtils.ets:74` — `rdbStore.delete(predicates).then((rows: number) => {`
+- `entry/src/main/ets/util/SongCacheManager.ets:115` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongCacheManager.ets:147` — `PreferencesUtil.put(fullKey, JSON.stringify(cacheItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:184` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:224` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:136` — `this.loadedSongIds.delete(song.id);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:203` — `this.loadedSongIds.delete(id);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:59` — `const existingItem = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:71` — `this.downloadQueue.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:216` — `await DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/SongDownloadManager.ets:279` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongDownloadManager.ets:381` — `PreferencesUtil.put(fullKey, JSON.stringify(downloadItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:440` — `await PreferencesUtil.delete(fullKey, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:545` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/view/Playing.ets:461` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/view/Playing.ets:462` — `let data = await httpRequest.request(netFile);`
+## Community_OH
+
+- `entry/src/main/ets/adapter/index.ets:1` — `import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "@ohos/axios"`
+- `entry/src/main/ets/adapter/index.ets:63` — `const response: AxiosResponse = await axios.request(config)`
+- `entry/src/main/ets/adapter/index.ets:91` — `const request = axios.create({`
+- `entry/src/main/ets/adapter/index.ets:92` — `baseURL: source.url,`
+- `entry/src/main/ets/adapter/index.ets:120` — `const res = (await request.get('/connect/status')).data as BaseResponse<User>`
+- `entry/src/main/ets/adapter/index.ets:133` — `const res = (await request.get('/connect/qr/key')).data as BaseResponse<UniKey>`
+- `entry/src/main/ets/adapter/index.ets:145` — `const res = (await request.get('/connect/qr/create?key=${unikey}')).data as BaseResponse<QRCode>`
+- `entry/src/main/ets/adapter/index.ets:157` — `const res = (await request.get('/connect/qr/check?key=${unikey}')).data as BaseResponse<QRCheck>`
+- `entry/src/main/ets/adapter/index.ets:174` — `.get('/playlist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:229` — `.get('/song/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:284` — `.get('/artist/recommend?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:339` — `.get('/playlist/toplist?limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:392` — `.get('/playlist/list?uid=${source.auth?.user?.id}')`
+- `entry/src/main/ets/adapter/index.ets:439` — `const res = (await request.get('/playlist/detail?id=${playlist.id}', {`
+- `entry/src/main/ets/adapter/index.ets:464` — `const res = (await request.get('/album/detail?id=${album.id}', {`
+- `entry/src/main/ets/adapter/index.ets:513` — `const res = (await request.get(uri)).data as BaseResponse<Song>;`
+- `entry/src/main/ets/adapter/index.ets:526` — `const res = (await request.get('/artist/detail?id=${artist.id}', {`
+- `entry/src/main/ets/adapter/index.ets:555` — `.get('/search?keywords=${keywords}&limit=${limit}')`
+- `entry/src/main/ets/adapter/index.ets:633` — `const res = (await request.put('/song/like?id=${song.id}&like=${like}')).data as BaseResponse<LikeResponse>;`
+- `entry/src/main/ets/util/AVPlayerManager.ets:590` — `player.url = url;`
+- `entry/src/main/ets/util/AVPlayerManager.ets:681` — `// let isMixWithOthers = await AppStorage.get(StorageConstants.MIX_WITH_OTHERS) as boolean`
+- `entry/src/main/ets/util/DownloadUtils.ets:48` — `public async downloadFile(config: DownloadConfig): Promise<string | void> {`
+- `entry/src/main/ets/util/DownloadUtils.ets:62` — `const downloadTask = await request.downloadFile(this.context!, {`
+- `entry/src/main/ets/util/EventHelper.ets:53` — `DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/EventHelper.ets:136` — `const cache = SongCacheManager.get('${key}');`
+- `entry/src/main/ets/util/EventHelper.ets:173` — `EmitterUtil.post("on_playing_song", data);`
+- `entry/src/main/ets/util/EventHelper.ets:183` — `EmitterUtil.post("on_loop_mode", loopMode);`
+- `entry/src/main/ets/util/EventHelper.ets:225` — `let pageStack = AppStorage.get("pageStack") as NavPathStack`
+- `entry/src/main/ets/util/EventHelper.ets:233` — `EmitterUtil.post("on_init_data", data);`
+- `entry/src/main/ets/util/EventHelper.ets:237` — `EmitterUtil.post("on_favorite_toggle", data);`
+- `entry/src/main/ets/util/EventHelper.ets:247` — `EmitterUtil.post("on_song_state", data);`
+- `entry/src/main/ets/util/EventHelper.ets:251` — `EmitterUtil.post("on_pause_timer", pauseAt);`
+- `entry/src/main/ets/util/EventHelper.ets:255` — `EmitterUtil.post("on_form_jump", targetPage);`
+- `entry/src/main/ets/util/FormUtils.ets:35` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:73` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:74` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:114` — `let songItem: Song = AppStorage.get('current_playing_song') as Song;`
+- `entry/src/main/ets/util/FormUtils.ets:129` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/util/FormUtils.ets:130` — `let data = await httpRequest.request(netFile);`
+- `entry/src/main/ets/util/FormUtils.ets:180` — `let httpRequest = http.createHttp();`
+- `entry/src/main/ets/util/FormUtils.ets:181` — `let data = await httpRequest.request(imageUrl+'?param=512y512');`
+- `entry/src/main/ets/util/PipManager.ets:11` — `let mess:string=AppStorage.get('test_index')??''`
+- `entry/src/main/ets/util/PipManager.ets:53` — `Text(AppStorage.get('test_index'))`
+- `entry/src/main/ets/util/PipManager.ets:66` — `mess =AppStorage.get('test_index') ??'a'`
+- `entry/src/main/ets/util/PipManager.ets:75` — `private mess:string=AppStorage.get('test_index')??''`
+- `entry/src/main/ets/util/PipManager.ets:80` — `//   this.mess = AppStorage.get('test_index')??'w';`
+- `entry/src/main/ets/util/PipManager.ets:92` — `mess=AppStorage.get('test_index')??'w'`
+- `entry/src/main/ets/util/PipManager.ets:93` — `song = AppStorage.get("current_playing_song")??song`
+- `entry/src/main/ets/util/PipManager.ets:95` — `Is_PAD = AppStorage.get("isWideScreen")??false`
+- `entry/src/main/ets/util/PipManager.ets:134` — `// private message_text:LyricsLine=AppStorage.get('current_line_lyrics')`
+- `entry/src/main/ets/util/PipManager.ets:137` — `private mess:string=AppStorage.get('test_index')??'w'`
+- `entry/src/main/ets/util/PipManager.ets:269` — `playing_judge = AppStorage.get("playing_judge")??false`
+- `entry/src/main/ets/util/PipManager.ets:279` — `mess=AppStorage.get('test_index')??'a'`
+- `entry/src/main/ets/util/PipManager.ets:280` — `nodeController.update(AppStorage.get('test_index')??'a')`
+- `entry/src/main/ets/util/PipManager.ets:286` — `nodeController.update(AppStorage.get('test_index')??'l')`
+- `entry/src/main/ets/util/PreferenceCache.ets:49` — `return PreferencesCache.CACHE_MAP.get(key) as string;`
+- `entry/src/main/ets/util/RdbUtils.ets:74` — `rdbStore.delete(predicates).then((rows: number) => {`
+- `entry/src/main/ets/util/SongCacheManager.ets:115` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongCacheManager.ets:147` — `PreferencesUtil.put(fullKey, JSON.stringify(cacheItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:184` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongCacheManager.ets:224` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:136` — `this.loadedSongIds.delete(song.id);`
+- `entry/src/main/ets/util/SongDataSourcePrefetching.ets:203` — `this.loadedSongIds.delete(id);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:59` — `const existingItem = this.downloadQueue.get(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:71` — `this.downloadQueue.delete(songId);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:216` — `await DownloadManager.downloadFile({`
+- `entry/src/main/ets/util/SongDownloadManager.ets:279` — `await PreferencesUtil.put(`
+- `entry/src/main/ets/util/SongDownloadManager.ets:381` — `PreferencesUtil.put(fullKey, JSON.stringify(downloadItem), this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:440` — `await PreferencesUtil.delete(fullKey, this.config.preferenceName);`
+- `entry/src/main/ets/util/SongDownloadManager.ets:545` — `await PreferencesUtil.delete(key, this.config.preferenceName);`
+- `entry/src/main/ets/view/Playing.ets:461` — `let httpRequest = http.createHttp()`
+- `entry/src/main/ets/view/Playing.ets:462` — `let data = await httpRequest.request(netFile);`

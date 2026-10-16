@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Core",
+    "url": "https://github.com/Edge-Music/Core.git",
+    "commit": "3af0a8c965e4ca1860194689099b32173351880f",
+    "date": "2026-03-18T16:28:50+08:00"
+  },
+  {
+    "name": "Community",
+    "url": "https://github.com/Edge-Music/Community.git",
+    "commit": "7dbf7e691eaa62231c4115286b0e5e51f2fa9c1c",
+    "date": "2025-05-29T10:38:59+08:00"
+  },
+  {
+    "name": "Community_OH",
+    "url": "https://github.com/Edge-Music/Community_OH.git",
+    "commit": "1b88305979d533e9a2e9b4195105d1ac0b998083",
+    "date": "2025-12-19T21:06:58+08:00"
+  },
+  {
+    "name": "NeteaseMusicAdapter",
+    "url": "https://github.com/Edge-Music/NeteaseMusicAdapter.git",
+    "commit": "36c50460c2129f541ec4be4e849411472b51f09c",
+    "date": "2026-06-16T01:51:16+08:00"
+  },
+  {
+    "name": "QMusicAdapter",
+    "url": "https://github.com/Edge-Music/QMusicAdapter.git",
+    "commit": "511c37fbf817cad94be57d4d9f30227c90c9557b",
+    "date": "2026-04-26T13:32:41+08:00"
+  },
+  {
+    "name": "Docs",
+    "url": "https://github.com/Edge-Music/Docs.git",
+    "commit": "d0c351a198248c3d96f40b776cda57bb8ebe8799",
+    "date": "2026-05-09T19:49:01+08:00"
+  },
+  {
+    "name": "OpenSubsonic",
+    "url": "https://github.com/opensubsonic/open-subsonic-api.git",
+    "commit": "be131fb44a48fb346faa16f5a242785fdfe3052b",
+    "date": "2026-10-10T12:03:49+03:00"
+  }
+]
