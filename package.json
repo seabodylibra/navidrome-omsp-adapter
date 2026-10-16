@@ -1,0 +1,25 @@
+{
+  "name": "navidrome-omsp-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloud Share OMSP adapter for Navidrome / OpenSubsonic",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "npm run build && node --test dist/src/*.test.js dist/src/navidrome/*.test.js dist/src/omsp/*.test.js dist/test/*.test.js",
+    "test:integration": "npm run build && node --test dist/test/*.test.js",
+    "test:navidrome": "tsx scripts/test-navidrome.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

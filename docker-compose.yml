@@ -1,0 +1,29 @@
+services:
+  navidrome-omsp:
+    build: .
+    image: navidrome-omsp-adapter:latest
+    container_name: navidrome-omsp
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NAVIDROME_URL: ${NAVIDROME_URL:?Set NAVIDROME_URL in .env}
+      NAVIDROME_USERNAME: ${NAVIDROME_USERNAME:?Set NAVIDROME_USERNAME in .env}
+      NAVIDROME_PASSWORD: ${NAVIDROME_PASSWORD:?Set NAVIDROME_PASSWORD in .env}
+      OMSP_TOKEN: ${OMSP_TOKEN:?Set OMSP_TOKEN in .env}
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      STREAM_MODE: ${STREAM_MODE:-redirect}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
