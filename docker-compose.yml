@@ -18,6 +18,8 @@ services:
       PORT: 3000
       LOG_LEVEL: ${LOG_LEVEL:-info}
       STREAM_MODE: ${STREAM_MODE:-redirect}
+      EXPOSE_ALBUMS_IN_LIBRARY: ${EXPOSE_ALBUMS_IN_LIBRARY:-false}
+      ALBUM_BROWSE_LIMIT: ${ALBUM_BROWSE_LIMIT:-2000}
       PUBLIC_URL: ${PUBLIC_URL:-}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

@@ -6,6 +6,8 @@ export interface Config {
   port: number;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   streamMode: 'redirect' | 'proxy';
+  exposeAlbumsInLibrary: boolean;
+  albumBrowseLimit: number;
   publicUrl?: URL;
 }
 
@@ -28,6 +30,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'].includes(logLevel)) throw new Error('Invalid LOG_LEVEL');
   const streamMode = env.STREAM_MODE ?? 'redirect';
   if (streamMode !== 'redirect' && streamMode !== 'proxy') throw new Error('STREAM_MODE must be redirect or proxy');
+  const exposeAlbumsText = env.EXPOSE_ALBUMS_IN_LIBRARY ?? 'false';
+  if (exposeAlbumsText !== 'true' && exposeAlbumsText !== 'false') throw new Error('EXPOSE_ALBUMS_IN_LIBRARY must be true or false');
+  const albumBrowseLimit = Number(env.ALBUM_BROWSE_LIMIT ?? 2000);
+  if (!Number.isInteger(albumBrowseLimit) || albumBrowseLimit < 1 || albumBrowseLimit > 10000) {
+    throw new Error('ALBUM_BROWSE_LIMIT must be an integer from 1 to 10000');
+  }
   const publicUrlText = env.PUBLIC_URL?.trim();
   const publicUrl = publicUrlText ? new URL(publicUrlText) : undefined;
   if (publicUrl && !['http:', 'https:'].includes(publicUrl.protocol)) throw new Error('PUBLIC_URL must use HTTP or HTTPS');
@@ -36,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     navidromeUrl, username: required(env, 'NAVIDROME_USERNAME'), password: required(env, 'NAVIDROME_PASSWORD'),
     omspToken: required(env, 'OMSP_TOKEN'), port,
     logLevel: logLevel as Config['logLevel'], streamMode,
+    exposeAlbumsInLibrary: exposeAlbumsText === 'true', albumBrowseLimit,
     ...(publicUrl ? { publicUrl } : {}),
   };
 }

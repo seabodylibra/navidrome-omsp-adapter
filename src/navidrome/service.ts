@@ -11,7 +11,8 @@ export class MusicService {
   private recommendationsFlight: Promise<Awaited<ReturnType<MusicService['fetchRecommendations']>>> | undefined;
   constructor(private readonly client: NavidromeClient, private readonly config: Config, private readonly publicBase: PublicBase) {}
 
-  coverUrl(id: string): string {
+  coverUrl(id: string | undefined, type: 'album' | 'song' | 'artist' | 'playlist' = 'album'): string {
+    if (!id) return new URL(`media/placeholder/v1/${type}.svg`, this.publicBase()).toString();
     const { expires, sig } = signMedia(this.config.omspToken, 'cover', id);
     // Cloud Share appends "?param=..." literally, so keep capability fields in the path.
     return new URL(`media/cover/${encodeURIComponent(id)}/${expires}/${sig}`, this.publicBase()).toString();
@@ -32,9 +33,36 @@ export class MusicService {
 
   async playlists(limit = 1000): Promise<OmspPlaylist[]> {
     const data = await this.client.call<{ playlists?: { playlist?: Playlist[] } }>('getPlaylists', { username: this.config.username });
-    const playlists = (data.playlists?.playlist ?? []).slice(0, limit).map(item => asPlaylist(item, id => this.coverUrl(id)));
+    const playlists = (data.playlists?.playlist ?? []).slice(0, limit).map(item => asPlaylist(item, (id, type) => this.coverUrl(id, type)));
     const stars = await this.favoriteIds();
-    return [{ id: 'starred', name: '喜欢的歌曲', size: stars.size, creator: { id: this.config.username, name: this.config.username }, type: 'normal' }, ...playlists];
+    const result: OmspPlaylist[] = [{ id: 'starred', name: '喜欢的歌曲', cover: this.coverUrl(undefined, 'playlist'), size: stars.size,
+      creator: { id: this.config.username, name: this.config.username }, type: 'normal' }, ...playlists];
+    if (this.config.exposeAlbumsInLibrary) result.push(...(await this.browseableAlbums()));
+    return result;
+  }
+
+  private async browseableAlbums(): Promise<OmspPlaylist[]> {
+    const albums = new Map<string, Album>();
+    let offset = 0;
+    const pageSize = 500;
+    while (offset < this.config.albumBrowseLimit) {
+      const size = Math.min(pageSize, this.config.albumBrowseLimit - offset);
+      const data = await this.client.call<{ albumList2?: { album?: Album[] } }>('getAlbumList2', {
+        type: 'alphabeticalByName', size, offset,
+      });
+      const page = data.albumList2?.album ?? [];
+      for (const album of page) {
+        if (albums.size >= this.config.albumBrowseLimit) break;
+        if (album.id && !albums.has(album.id)) albums.set(album.id, album);
+      }
+      offset += page.length;
+      if (page.length < size || page.length === 0) break;
+    }
+    return [...albums.values()].map(album => ({
+      id: `album:${album.id}`, name: album.name, cover: this.coverUrl(album.coverArt, 'album'),
+      size: album.songCount ?? 0, creator: { id: album.artistId ?? '', name: album.artist ?? '' },
+      type: 'album', meta: { subscribed: false },
+    }));
   }
   async playlistDetail(id: string): Promise<OmspPlaylist> {
     if (id.startsWith('album:')) {
@@ -51,13 +79,13 @@ export class MusicService {
       return {
         id: 'starred', name: '喜欢的歌曲', size: songs.length,
         creator: { id: this.config.username, name: this.config.username }, type: 'normal',
-        songs: songs.map(song => asSong(song, key => this.coverUrl(key), item => this.streamUrl(item), true)),
+        songs: songs.map(song => asSong(song, (key, type) => this.coverUrl(key, type), item => this.streamUrl(item), true)),
       };
     }
     const data = await this.client.call<{ playlist?: Playlist }>('getPlaylist', { id });
     if (!data.playlist) throw new Error('Playlist not found');
-    const playlist = asPlaylist(data.playlist, id => this.coverUrl(id));
-    playlist.songs = (data.playlist.entry ?? []).filter(item => !item.isDir).map(item => asSong(item, id => this.coverUrl(id), song => this.streamUrl(song)));
+    const playlist = asPlaylist(data.playlist, (key, type) => this.coverUrl(key, type));
+    playlist.songs = (data.playlist.entry ?? []).filter(item => !item.isDir).map(item => asSong(item, (key, type) => this.coverUrl(key, type), song => this.streamUrl(song)));
     return playlist;
   }
   async albumDetail(id: string): Promise<OmspPlaylist> {
@@ -66,9 +94,9 @@ export class MusicService {
     const album = data.album;
     return {
       id: album.id, name: album.name, size: album.songCount ?? album.song?.length ?? 0,
-      ...(album.coverArt ? { cover: this.coverUrl(album.coverArt) } : {}), creator: { id: album.artistId ?? '', name: album.artist ?? '' },
+      cover: this.coverUrl(album.coverArt, 'album'), creator: { id: album.artistId ?? '', name: album.artist ?? '' },
       type: 'album', meta: { subscribed: false },
-      songs: (album.song ?? []).map(item => asSong(item, id => this.coverUrl(id), song => this.streamUrl(song))),
+      songs: (album.song ?? []).map(item => asSong(item, (key, type) => this.coverUrl(key, type), song => this.streamUrl(song))),
     };
   }
   async artistDetail(id: string): Promise<OmspPlaylist> {
@@ -83,9 +111,9 @@ export class MusicService {
     }));
     return {
       id: artist.id, name: artist.name, size: songs.size,
-      ...(artist.coverArt ? { cover: this.coverUrl(artist.coverArt) } : {}), creator: { id: artist.id, name: artist.name },
+      cover: this.coverUrl(artist.coverArt, 'artist'), creator: { id: artist.id, name: artist.name },
       type: 'artist', meta: { subscribed: false },
-      songs: [...songs.values()].map(song => asSong(song, cover => this.coverUrl(cover), item => this.streamUrl(item))),
+      songs: [...songs.values()].map(song => asSong(song, (cover, type) => this.coverUrl(cover, type), item => this.streamUrl(item))),
     };
   }
   async search(query: string, limit: number): Promise<{ songs: OmspSong[]; albums: OmspAlbum[]; artists: OmspArtist[]; playlists: OmspPlaylist[] }> {
@@ -96,16 +124,16 @@ export class MusicService {
     const [playlists] = await Promise.all([this.playlists()]);
     const lowered = query.toLocaleLowerCase();
     return {
-      songs: (data.searchResult3?.song ?? []).map(song => asSong(song, id => this.coverUrl(id), item => this.streamUrl(item))),
-      albums: (data.searchResult3?.album ?? []).map(album => asAlbum(album, id => this.coverUrl(id))),
-      artists: (data.searchResult3?.artist ?? []).map(artist => asArtist(artist, id => this.coverUrl(id))),
+      songs: (data.searchResult3?.song ?? []).map(song => asSong(song, (id, type) => this.coverUrl(id, type), item => this.streamUrl(item))),
+      albums: (data.searchResult3?.album ?? []).map(album => asAlbum(album, (id, type) => this.coverUrl(id, type))),
+      artists: (data.searchResult3?.artist ?? []).map(artist => asArtist(artist, (id, type) => this.coverUrl(id, type))),
       playlists: playlists.filter(playlist => playlist.name.toLocaleLowerCase().includes(lowered)).slice(0, count),
     };
   }
   async songDetail(id: string): Promise<OmspSong> {
     const [data, ids] = await Promise.all([this.client.call<{ song?: Child }>('getSong', { id }), this.favoriteIds()]);
     if (!data.song) throw new Error('Song not found');
-    const song = asSong(data.song, key => this.coverUrl(key), item => this.streamUrl(item), ids.has(id));
+    const song = asSong(data.song, (key, type) => this.coverUrl(key, type), item => this.streamUrl(item), ids.has(id));
     try {
       const lyrics = await this.client.call<{ lyricsList?: { structuredLyrics?: StructuredLyric[] } }>('getLyricsBySongId', { id });
       const lyric = lyrics.lyricsList?.structuredLyrics?.find(item => item.line?.length);
@@ -153,18 +181,18 @@ export class MusicService {
       this.client.call<{ artists?: { index?: Array<{ artist?: Artist[] }> } }>('getArtists'),
       this.client.call<{ albumList2?: { album?: Album[] } }>('getAlbumList2', { type: 'frequent', size }),
     ]);
-    const albumPlaylist = (album: Album): OmspPlaylist => ({ id: `album:${album.id}`, name: album.name, ...(album.coverArt ? { cover: this.coverUrl(album.coverArt) } : {}), size: album.songCount ?? 0, creator: { id: album.artistId ?? '', name: album.artist ?? '' }, type: 'album' });
+    const albumPlaylist = (album: Album): OmspPlaylist => ({ id: `album:${album.id}`, name: album.name, cover: this.coverUrl(album.coverArt, 'album'), size: album.songCount ?? 0, creator: { id: album.artistId ?? '', name: album.artist ?? '' }, type: 'album' });
     const flatArtists = (artistData.artists?.index ?? []).flatMap(item => item.artist ?? []);
     return {
       playlists: (albumData.albumList2?.album ?? []).map(albumPlaylist),
-      songs: (songData.randomSongs?.song ?? []).map(song => asSong(song, id => this.coverUrl(id), item => this.streamUrl(item))),
-      artists: flatArtists.slice(0, size).map(artist => asArtist(artist, id => this.coverUrl(id))),
+      songs: (songData.randomSongs?.song ?? []).map(song => asSong(song, (id, type) => this.coverUrl(id, type), item => this.streamUrl(item))),
+      artists: flatArtists.slice(0, size).map(artist => asArtist(artist, (id, type) => this.coverUrl(id, type))),
       toplist: (frequent.albumList2?.album ?? []).map(albumPlaylist),
     };
   }
   async newest(limit: number): Promise<OmspPlaylist[]> {
     const data = await this.client.call<{ albumList2?: { album?: Album[] } }>('getAlbumList2', { type: 'newest', size: Math.min(limit, 100) });
-    return (data.albumList2?.album ?? []).map(album => ({ id: `album:${album.id}`, name: album.name, ...(album.coverArt ? { cover: this.coverUrl(album.coverArt) } : {}), size: album.songCount ?? 0, creator: { id: album.artistId ?? '', name: album.artist ?? '' }, type: 'album' }));
+    return (data.albumList2?.album ?? []).map(album => ({ id: `album:${album.id}`, name: album.name, cover: this.coverUrl(album.coverArt, 'album'), size: album.songCount ?? 0, creator: { id: album.artistId ?? '', name: album.artist ?? '' }, type: 'album' }));
   }
   async scrobble(id: string, time: number): Promise<void> { await this.client.call('scrobble', { id, time, submission: true }); }
 }

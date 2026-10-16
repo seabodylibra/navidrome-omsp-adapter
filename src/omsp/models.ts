@@ -13,24 +13,25 @@ export interface OmspPlaylist {
   type: 'normal' | 'album' | 'artist'; description?: string; meta?: { subscribed: boolean };
 }
 
-export const asArtist = (artist?: Pick<Artist, 'id' | 'name' | 'coverArt'>, coverUrl?: (id: string) => string): OmspArtist => ({
-  id: artist?.id ?? '', name: artist?.name ?? '', ...(artist?.coverArt && coverUrl ? { avatar: coverUrl(artist.coverArt) } : {}),
+export const asArtist = (artist: Pick<Artist, 'id' | 'name' | 'coverArt'> | undefined,
+  coverUrl: (id: string | undefined, type?: 'album' | 'song' | 'artist' | 'playlist') => string): OmspArtist => ({
+  id: artist?.id ?? '', name: artist?.name ?? '', avatar: coverUrl(artist?.coverArt, 'artist'),
 });
 
-export function asAlbum(album: Album, coverUrl: (id: string) => string): OmspAlbum {
+export function asAlbum(album: Album, coverUrl: (id: string | undefined, type?: 'album' | 'song' | 'artist' | 'playlist') => string): OmspAlbum {
   return {
-    id: album.id, name: album.name, ...(album.coverArt ? { cover: coverUrl(album.coverArt) } : {}),
+    id: album.id, name: album.name, cover: coverUrl(album.coverArt, 'album'),
     artists: album.artist ? [{ id: album.artistId ?? '', name: album.artist }] : [],
     size: album.songCount ?? album.song?.length ?? 0,
   };
 }
 
-export function asSong(song: Child, coverUrl: (id: string) => string, streamUrl: (song: Child) => string,
+export function asSong(song: Child, coverUrl: (id: string | undefined, type?: 'album' | 'song' | 'artist' | 'playlist') => string, streamUrl: (song: Child) => string,
   isFavorite = false): OmspSong {
   const artist: OmspArtist = { id: song.artistId ?? '', name: song.artist ?? '' };
   const album: OmspAlbum = {
     id: song.albumId ?? '', name: song.album ?? '',
-    ...(song.coverArt ? { cover: coverUrl(song.coverArt) } : {}), artists: artist.name ? [artist] : [], size: 0,
+    cover: coverUrl(song.coverArt, 'song'), artists: artist.name ? [artist] : [], size: 0,
   };
   const suffix = song.suffix?.toLowerCase();
   const playable = !song.isVideo && (song.isDir !== true);
@@ -47,9 +48,9 @@ export function asSong(song: Child, coverUrl: (id: string) => string, streamUrl:
   };
 }
 
-export function asPlaylist(playlist: Playlist, coverUrl: (id: string) => string): OmspPlaylist {
+export function asPlaylist(playlist: Playlist, coverUrl: (id: string | undefined, type?: 'album' | 'song' | 'artist' | 'playlist') => string): OmspPlaylist {
   return {
-    id: playlist.id, name: playlist.name, ...(playlist.coverArt ? { cover: coverUrl(playlist.coverArt) } : {}),
+    id: playlist.id, name: playlist.name, cover: coverUrl(playlist.coverArt, 'playlist'),
     size: playlist.songCount ?? playlist.entry?.length ?? 0,
     creator: { id: playlist.owner ?? '', name: playlist.owner ?? '' }, type: 'normal',
     ...(playlist.comment ? { description: playlist.comment } : {}), meta: { subscribed: false },

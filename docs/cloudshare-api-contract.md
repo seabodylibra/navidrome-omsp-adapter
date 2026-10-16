@@ -58,6 +58,8 @@ Query 参数全部通过客户端 URL 字符串或 Axios params 发送；adapter
 
 可直接确认 `Song.duration` 使用播放器毫秒时长；Navidrome 的秒数必须乘 1000。封面在 Playing/Playlist 等 UI 中通过 `cover(url,size)` 追加 query，故有签名的封面 URL 需容忍其被加上额外参数。
 
+Cloud Share 的资料库页复用 `/playlist/list` 和 `/playlist/detail`。可选地返回带 `type: "album"`、`id: "album:<id>"` 的 Playlist 形状条目，可让客户端在现有列表入口打开专辑并选择曲目；不会修改 Cloud Share 首页、推荐卡片或自动续播界面。由于客户端版本/页面入口行为仍需真机确认，实际手机端验收需单独记录。
+
 ## 未实现后的影响与 MVP 数量
 
 进入首页需要 1 个必需认证 endpoint 与 5 个首次加载 endpoint（推荐歌曲、歌单、艺人、排行榜、用户歌单），共 **6 个客户端 API endpoint**；5 个推荐列表可安全为空，但 `/connect/status` 不能缺失。进入 P0 的搜索、歌曲、专辑/艺人/歌单详情、收藏需要额外 6 个被客户端直接调用的 endpoint，合计 **12 个必需/安全可降级的客户端 API endpoint**。另实现独立歌词路由可作为扩展，但客户端当前不单独请求它；歌曲详情应直接返回 `meta.lyric.normal`。封面和播放由歌曲/实体响应中的 URL 触发，不额外算 OMSP 请求。

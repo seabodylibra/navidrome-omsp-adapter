@@ -43,6 +43,8 @@ Do not publish the adapter port to the public Internet without HTTPS and a stron
 | `PORT` | No | Adapter listen port; defaults to `3000` |
 | `PUBLIC_URL` | No | Stable adapter origin for generated audio and cover URLs, useful behind proxies/Tailscale |
 | `STREAM_MODE` | No | `redirect` by default; set to `proxy` if the player cannot follow Navidrome redirects |
+| `EXPOSE_ALBUMS_IN_LIBRARY` | No | `false` by default; set to `true` to add virtual Navidrome albums to `/playlist/list` |
+| `ALBUM_BROWSE_LIMIT` | No | Maximum number of albums scanned/listed when enabled; integer from `1` to `10000`, defaults to `2000` |
 | `LOG_LEVEL` | No | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`; defaults to `info` |
 
 Navidrome's credentials are sent to its API only, using Subsonic token authentication with a new random salt for every request (`t=md5(password + salt)`). Never put credentials in `NAVIDROME_URL`.
@@ -70,6 +72,12 @@ For Tailscale, use the adapter machine's MagicDNS name in both `PUBLIC_URL` and 
 In the default `redirect` mode the adapter returns a per-song URL with a signed, expiring capability, then responds with HTTP 307 to Navidrome's stream endpoint. Navidrome receives Subsonic `u/t/s`; the password is never included in the media URL or sent to Cloud Share. The unique path filename avoids a filename collision in Cloud Share's current download/cache behavior. Audio bytes do not pass through the adapter.
 
 Cover art uses a stable signed Adapter URL and is proxied on demand; it is not downloaded to persistent storage. The route tolerates Cloud Share appending its `?param=...` size hint.
+
+### Browse albums from the library
+
+Cloud Share's existing library playlist list can display Navidrome albums as virtual `type: album` items. Set `EXPOSE_ALBUMS_IN_LIBRARY=true`; each album is listed as `album:<Navidrome ID>` and opens through `/playlist/detail`, which returns its songs. The adapter fetches album pages from Navidrome and stops at `ALBUM_BROWSE_LIMIT` (default 2000, maximum 10000). This adds a manual browse-and-select path where the client exposes its library list. It does not change Cloud Share's home layout, recommendation cards, or automatic continuation/player UI; exact placement and selection behavior still depend on the installed client version.
+
+Missing artwork uses a stable neutral SVG placeholder (`/media/placeholder/v1/{album,song,artist,playlist}.svg`) with an explicit image MIME type and cache policy, so the client always receives an image URL instead of retaining an unrelated prior image.
 
 If playback fails because a client does not follow the redirect or a proxy blocks it, set `STREAM_MODE=proxy`. The adapter then passes through `Range`, `206 Partial Content`, `Content-Range`, `Content-Length`, `Content-Type`, and `Accept-Ranges`. The integration suite checks FLAC, MP3, and AAC response handling.
 

@@ -9,6 +9,7 @@ import { verifyMedia } from './media-signature.js';
 
 const ok = <T>(data: T) => ({ code: 0, message: 'success', data, timestamp: Date.now() });
 const failure = (code: number, message: string) => ({ code, message, data: null, timestamp: Date.now() });
+const placeholderSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#e8e8e8"/><circle cx="256" cy="256" r="132" fill="#d2d2d2"/><path d="M295 163v157a54 54 0 1 1-24-45V198l112-26v122a54 54 0 1 1-24-45V142z" fill="#8a8a8a"/></svg>';
 
 export function createApp(config: Config, fetcher?: typeof fetch): FastifyInstance {
   const app = Fastify({
@@ -126,6 +127,16 @@ export function createApp(config: Config, fetcher?: typeof fetch): FastifyInstan
     if (!request.body?.id) return reply.code(400).send(failure(40000, 'id is required'));
     try { await music.scrobble(request.body.id, Number(request.body.time) || 0); return ok({}); }
     catch (error) { return reply.code(502).send(failure(50200, publicError(error))); }
+  });
+
+  app.get<{ Params: { type: string } }>('/media/placeholder/v1/:type.svg', async (request, reply) => {
+    if (!['album', 'song', 'artist', 'playlist'].includes(request.params.type)) return reply.code(404).send();
+    const etag = '"placeholder-v1"';
+    reply.header('Content-Type', 'image/svg+xml; charset=utf-8')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .header('ETag', etag);
+    if (request.headers['if-none-match'] === etag) return reply.code(304).send();
+    return reply.send(placeholderSvg);
   });
 
   app.get<{ Params: { id: string; expires: string; sig: string }; Querystring: { param?: string } }>('/media/cover/:id/:expires/:sig', async (request, reply) => {

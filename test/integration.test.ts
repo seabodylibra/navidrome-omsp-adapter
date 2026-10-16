@@ -8,6 +8,7 @@ import { signMedia } from '../src/media-signature.js';
 const config: Config = {
   navidromeUrl: new URL('https://nas.example/music/'), username: 'user + name', password: 'secret/pass?&',
   omspToken: 'a-long-test-token', port: 3000, logLevel: 'silent', streamMode: 'redirect',
+  exposeAlbumsInLibrary: false, albumBrowseLimit: 2000,
 };
 function mockNavidrome(calls: URL[]) {
   return async (input: URL | RequestInfo): Promise<Response> => {
@@ -109,6 +110,7 @@ test('playlist, album, artist details and favorite changes map to OpenSubsonic',
   try {
     const lists = await app.inject({ method: 'GET', url: '/playlist/list?uid=user%20%2B%20name', headers });
     assert.deepEqual(lists.json().data.map((item: { id: string }) => item.id), ['starred', 'p1']);
+    assert.equal(calls.some(url => url.pathname.endsWith('/getAlbumList2.view') && url.searchParams.get('type') === 'alphabeticalByName'), false);
     const playlist = await app.inject({ method: 'GET', url: '/playlist/detail?id=p1&limit=5000', headers });
     assert.equal(playlist.json().data.songs[0].id, '9');
     const album = await app.inject({ method: 'GET', url: '/playlist/detail?id=album%3A2', headers });
@@ -126,5 +128,76 @@ test('playlist, album, artist details and favorite changes map to OpenSubsonic',
     assert.equal(calls.some(url => url.pathname.endsWith('/getArtist.view') && url.searchParams.get('id') === '1'), true);
     assert.equal(calls.some(url => url.pathname.endsWith('/star.view') && url.searchParams.get('id') === '9'), true);
     assert.equal(calls.some(url => url.pathname.endsWith('/unstar.view') && url.searchParams.get('id') === '9'), true);
+  } finally { await app.close(); }
+});
+
+test('enabled library browsing paginates to its configured cap and opens virtual album tracks', async () => {
+  const browseConfig = { ...config, exposeAlbumsInLibrary: true, albumBrowseLimit: 700 };
+  const calls: URL[] = [];
+  const albums = Array.from({ length: 760 }, (_, index) => ({
+    id: `album-${index}`, name: `Album ${index}`, artist: 'Artist', artistId: 'artist-1', songCount: 1,
+  }));
+  const fetcher: typeof fetch = async input => {
+    const url = input instanceof URL ? input : new URL(String(input)); calls.push(url);
+    const endpoint = url.pathname.split('/').pop();
+    if (endpoint === 'getAlbumList2.view') {
+      const offset = Number(url.searchParams.get('offset') ?? 0);
+      const size = Number(url.searchParams.get('size') ?? 0);
+      const page = albums.slice(offset, offset + size);
+      if (offset === 500) page[0] = albums[499]!;
+      return Response.json({ 'subsonic-response': { status: 'ok', albumList2: { album: page } } });
+    }
+    if (endpoint === 'getPlaylists.view') return Response.json({ 'subsonic-response': { status: 'ok', playlists: { playlist: [{ id: 'p1', name: 'Mix', songCount: 1 }] } } });
+    if (endpoint === 'getStarred2.view') return Response.json({ 'subsonic-response': { status: 'ok', starred2: { song: [] } } });
+    if (endpoint === 'getAlbum.view') return Response.json({ 'subsonic-response': { status: 'ok', album: {
+      id: 'album-0', name: 'Album 0', artist: 'Artist', artistId: 'artist-1', song: [
+        { id: 'song-0', title: 'Track 0', album: 'Album 0', albumId: 'album-0', artist: 'Artist', artistId: 'artist-1', duration: 60, suffix: 'mp3' },
+      ],
+    } } });
+    if (endpoint === 'getArtist.view') return Response.json({ 'subsonic-response': { status: 'ok', artist: {
+      id: 'artist-1', name: 'Artist', album: [{ id: 'album-0', name: 'Album 0', song: [
+        { id: 'song-0', title: 'Track 0', album: 'Album 0', albumId: 'album-0', artist: 'Artist', artistId: 'artist-1', duration: 60, suffix: 'mp3' },
+      ] }],
+    } } });
+    if (endpoint === 'getSong.view') return Response.json({ 'subsonic-response': { status: 'ok', song: {
+      id: 'song-0', title: 'Track 0', album: 'Album 0', albumId: 'album-0', artist: 'Artist', artistId: 'artist-1', duration: 60, suffix: 'mp3',
+    } } });
+    return Response.json({ 'subsonic-response': { status: 'ok' } });
+  };
+  const app = createApp(browseConfig, fetcher);
+  try {
+    const headers = { token: config.omspToken };
+    const lists = await app.inject({ method: 'GET', url: '/playlist/list', headers });
+    const rows = lists.json().data as Array<{ id: string; type: string; cover?: string }>;
+    const virtualAlbums = rows.filter(row => row.type === 'album');
+    assert.equal(virtualAlbums.length, 699);
+    assert.equal(new Set(virtualAlbums.map(row => row.id)).size, 699);
+    assert.deepEqual(calls.filter(url => url.pathname.endsWith('/getAlbumList2.view')).map(url => [
+      url.searchParams.get('offset'), url.searchParams.get('size'), url.searchParams.get('type'),
+    ]), [['0', '500', 'alphabeticalByName'], ['500', '200', 'alphabeticalByName']]);
+    assert.equal(virtualAlbums[0]?.id, 'album:album-0');
+    assert.equal(new URL(virtualAlbums[0]!.cover!).pathname, '/media/placeholder/v1/album.svg');
+    assert.equal(new URL(rows.find(row => row.id === 'p1')!.cover!).pathname, '/media/placeholder/v1/playlist.svg');
+
+    const detail = await app.inject({ method: 'GET', url: '/playlist/detail?id=album%3Aalbum-0', headers });
+    assert.equal(detail.json().data.id, 'album:album-0');
+    assert.equal(detail.json().data.type, 'album');
+    assert.equal(detail.json().data.songs[0].id, 'song-0');
+    assert.equal(calls.some(url => url.pathname.endsWith('/getAlbum.view') && url.searchParams.get('id') === 'album-0'), true);
+
+    const song = await app.inject({ method: 'GET', url: '/song/detail?id=song-0', headers });
+    assert.equal(new URL(song.json().data.album.cover).pathname, '/media/placeholder/v1/song.svg');
+    const artist = await app.inject({ method: 'GET', url: '/artist/detail?id=artist-1', headers });
+    assert.equal(new URL(artist.json().data.cover).pathname, '/media/placeholder/v1/artist.svg');
+
+    const placeholder = await app.inject({ method: 'GET', url: '/media/placeholder/v1/album.svg?param=512y512' });
+    assert.equal(placeholder.statusCode, 200);
+    assert.equal(placeholder.headers['content-type'], 'image/svg+xml; charset=utf-8');
+    assert.equal(placeholder.headers['cache-control'], 'public, max-age=31536000, immutable');
+    assert.match(placeholder.body, /^<svg /);
+    assert.equal(placeholder.body.includes('Album 0'), false);
+    const cached = await app.inject({ method: 'GET', url: '/media/placeholder/v1/album.svg', headers: { 'if-none-match': '"placeholder-v1"' } });
+    assert.equal(cached.statusCode, 304);
+    assert.equal((await app.inject({ method: 'GET', url: '/media/placeholder/v1/untrusted.svg' })).statusCode, 404);
   } finally { await app.close(); }
 });
